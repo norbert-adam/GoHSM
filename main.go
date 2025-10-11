@@ -5,16 +5,25 @@ package main
 // TODO: Create a map of the slot indexes, slot IDs, and maybe slot labels
 // TODO: Check for invalid slots - e.g., in SoftHSM, there is always 1 slot that is not initialized/has no label
 // TODO: Implement logging
+	// Select from options:
+	// list all objects,
+	// key generation/deletion,
+	// encryption/decryption,
+	// wrapping/unwrapping,
+	// sing/verify.
+// TODO: rewrite generating functions to check for whether key size is provided or not, if not, query for value
 
 import (
-	"encoding/binary"
+	// "encoding/binary"
 	"errors"
 	"fmt"
 
-	"github.com/GoHSM/utils"
-	"github.com/GoHSM/objects"
-	"github.com/miekg/pkcs11"
 	// "github.com/GoHSM/utils"
+	// "github.com/GoHSM/objects"
+	// "github.com/GoHSM/generate"
+	"github.com/GoHSM/aes"
+
+	"github.com/miekg/pkcs11"
 )
 
 func main() {
@@ -65,31 +74,94 @@ func main() {
 	defer p.Logout(session)
 	fmt.Println("Successful login!")
 
-	// Select from options:
-	// list all objects,
-	// key generation/deletion,
-	// encryption/decryption,
-	// wrapping/unwrapping,
-	// sing/verify.
 
-	selection, err := printMenu(session, slot)
+
+	aesKey, err := aes.GenerateAES(p, session)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error: ", err)
 		return
 	}
 
-	switch selection {
-	case "listObjs", "listKeys",  "listCerts":
-		objects.ListObjects(p, session, selection)
-	case "genDel":
-		fmt.Println("Generate/Delete selected.")
-	case "encDec":
-		fmt.Println("Encryption/Decryption selected.")
-	case "wrapUnwr":
-		fmt.Println("Wrap/Unwrap selected.")
-	case "signVer":
-		fmt.Println("Sign/Verify selected.")
+	aes.WrapAES(p, session, aesKey)
+
+
+
+
+
+
+
+	// rsaPub, rsaPriv, err := generate.GenerateRSA(p, session)
+	// if err != nil {
+	// 	fmt.Println("Error: ", err)
+	// 	return
+	// }
+
+	// fmt.Println("AES Key: ", aesKey)
+	// fmt.Println("RSA Pub: ", rsaPub)
+	// fmt.Println("RSA Priv: ", rsaPriv)
+	// generate.GenerateECC(p, session)
+	
+	// selection, err := printMenu(session, slot)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	// switch selection {
+	// case "listObjs", "listKeys",  "listCerts":
+	// 	objects.ListObjects(p, session, selection)
+	// case "genDel":
+	// 	fmt.Println("Generate/Delete selected.")
+	// 	selection, err := genQuery()
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 		return
+	// 	}
+	// 	if selection == 1 {
+	// 		selection, err := generate.GenDetails()
+	// 		if err != nil {
+	// 			fmt.Sprint("Error reading input: ", err)
+	// 			return
+	// 		}
+	// 		switch selection {
+	// 		case 1:
+	// 			aesKey, err := generate.GenerateAES(p, session)
+	// 			if err != nil {
+	// 				fmt.Println("Error during key generation: ", err)
+	// 				return
+	// 			}
+	// 			fmt.Println("AES key generated - object handle: ", aesKey)
+	// 		case 2:
+	// 			generate.GenerateRSA(p)
+	// 		}
+	// 	}
+	// 	if selection == 2 {
+	// 		fmt.Println("Delete key was selected.")
+	// 	}
+
+	// case "encDec":
+	// 	fmt.Println("Encryption/Decryption selected.")
+	// case "wrapUnwr":
+	// 	fmt.Println("Wrap/Unwrap selected.")
+	// case "signVer":
+	// 	fmt.Println("Sign/Verify selected.")
+	// }
+}
+
+
+
+func genQuery() (int, error) {
+	var selection int
+	fmt.Println("Select what you want to do:")
+	fmt.Println("\t1. Generate Key")
+	fmt.Println("\t2. Delete Key")
+	_, err := fmt.Scan(&selection)
+	if err != nil {
+		newErr := fmt.Sprint("Error reading input: ", err)
+		return 0, errors.New(newErr)
 	}
+	
+	return selection, nil
 }
 
 
