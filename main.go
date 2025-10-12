@@ -90,16 +90,6 @@ func main() {
 
 
 
-	// rsaPub, rsaPriv, err := generate.GenerateRSA(p, session)
-	// if err != nil {
-	// 	fmt.Println("Error: ", err)
-	// 	return
-	// }
-
-	// fmt.Println("AES Key: ", aesKey)
-	// fmt.Println("RSA Pub: ", rsaPub)
-	// fmt.Println("RSA Priv: ", rsaPriv)
-	// generate.GenerateECC(p, session)
 	
 	// selection, err := printMenu(session, slot)
 	// if err != nil {

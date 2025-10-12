@@ -10,6 +10,13 @@ import (
 )
 
 
+// TODO: HANDLING KEYS
+// If generating keys:
+	// What for? Encr/Decr or Wrap/Unwrap
+// If using keys that already exist
+	// Get the attributes of the key
+	// Check whether it could be used for the operation
+
 
 
 func GenerateAES(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHandle, error){
