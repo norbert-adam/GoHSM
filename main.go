@@ -47,43 +47,16 @@ func main() {
 		return
 	}
 
-	fmt.Println("Session: ", p.Session)
-	fmt.Println("Selected: ", p.Selected)
-	
-	// selection, err := printMenu(session, slot)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
+	fmt.Println("Context:")
+	fmt.Printf("\tSession: %d\n", p.Session)
+	fmt.Printf("\tSelected: %d\n", p.Session)
+	fmt.Printf("\tAction: %s\n", p.Action)	
 
-	// switch selection {
-	// case "List":
-	// 	err := objects.ListObjectsMenu(p, session)
-	// 	if err != nil {
-	// 		fmt.Println("Error: ", err)
-	// 		return
-	// 	}
-	// case "Generate":
-	// 	fmt.Println("Generate was selected.")
-	// case "Delete":
-	// 	fmt.Println("Generate was selected.")
-	// case "Encrypt":
-	// 	fmt.Println("Generate was selected.")
-	// case "Decrypt":
-	// 	fmt.Println("Generate was selected.")
-	// case "Wrap":
-	// 	fmt.Println("Generate was selected.")
-	// case "Unwrap":
-	// 	fmt.Println("Generate was selected.")
-	// case "Sign":
-	// 	fmt.Println("Generate was selected.")
-	// case "Veriy":
-	// 	fmt.Println("Generate was selected.")
-	// }
+	printMenu(p)
 }
 
 
-func printMenu(session pkcs11.SessionHandle, slot uint) (string, error) {
+func printMenu(p *context.AppContext) (string, error) {
 	options := map[int]string{
 		1: "List",
 		2: "Generate",
@@ -96,7 +69,7 @@ func printMenu(session pkcs11.SessionHandle, slot uint) (string, error) {
 		9: "Verify",
 	}
 
-	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", slot, session)
+	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", slot, p.Session)
 	fmt.Printf("Available actions: \n")
 	fmt.Printf("\t1. List All Objects\n")
 	fmt.Printf("\t2. Generate Object\n")
@@ -114,8 +87,9 @@ func printMenu(session pkcs11.SessionHandle, slot uint) (string, error) {
 		newErr := fmt.Sprintf("Incorrect input: %v", err)
 		return "", errors.New(newErr)
 	}
-	if selection < 1 || selection > 5 {
-		return "", errors.New("incorrect input - selected option must be between 1 and 9")
+	if selection < 1 || selection > len(options) {
+		newErr := fmt.Sprintf("incorrect input - selected option must be between 1 and %d", len(options))
+		return "", errors.New(newErr)
 	}
 
 	return options[selection], nil
