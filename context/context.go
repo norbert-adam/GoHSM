@@ -11,7 +11,9 @@ import (
 type AppContext struct {
 	P11			*pkcs11.Ctx
 	Session		pkcs11.SessionHandle
+	Slot		uint
 	Selected	pkcs11.ObjectHandle
+	Action		string
 }
 
  
