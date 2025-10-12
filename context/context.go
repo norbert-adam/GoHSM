@@ -41,7 +41,7 @@ func InitializeContext() (*AppContext, error) {
 
 	ap := &AppContext{
 		P11: p,
-		Session: session,
+		Session: *session,
 	}
 	return ap, nil
 }
@@ -88,29 +88,30 @@ func selectSlot(slots []uint) (uint, error) {
 	}
 
 	slot := slots[selection]
+	fmt.Println("Slot selected: ", slots[selection])
 
 	return slot, nil
 }
 
-func sessionLogin(p *pkcs11.Ctx, slot uint) (pkcs11.SessionHandle, error){
+func sessionLogin(p *pkcs11.Ctx, slot uint) (*pkcs11.SessionHandle, error){
 	session, err := p.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		newErr := fmt.Sprint("Error opening session to slot %d: %s\n", slot, err)
-		return 0, errors.New(newErr)
+		return nil, errors.New(newErr)
 	}
 
 	password, err := getPassword()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	err = p.Login(session, pkcs11.CKU_USER, password)
 	if err != nil {
 		newErr := fmt.Sprintf("Error logging in to session %d: %v\n", session, err)
-		return 0, errors.New(newErr)
+		return nil, errors.New(newErr)
 	}
 
-	return session, nil
+	return &session, nil
 }
 
 func getPassword() (string, error) {

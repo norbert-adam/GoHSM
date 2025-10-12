@@ -5,12 +5,12 @@ package main
 // TODO: Create a map of the slot indexes, slot IDs, and maybe slot labels
 // TODO: Check for invalid slots - e.g., in SoftHSM, there is always 1 slot that is not initialized/has no label
 // TODO: Implement logging
-	// Select from options:
-	// list all objects,
-	// key generation/deletion,
-	// encryption/decryption,
-	// wrapping/unwrapping,
-	// sing/verify.
+// Select from options:
+// list all objects,
+// key generation/deletion,
+// encryption/decryption,
+// wrapping/unwrapping,
+// sing/verify.
 // TODO: rewrite generating functions to check for whether key size is provided or not, if not, query for value
 
 import (
@@ -20,6 +20,7 @@ import (
 
 	// "github.com/GoHSM/objects"
 	"github.com/GoHSM/context"
+	"github.com/GoHSM/objects"
 	// "github.com/GoHSM/generate"
 	// "github.com/GoHSM/aes"
 	// "github.com/GoHSM/utils"
@@ -39,39 +40,15 @@ func main() {
 	defer p.P11.Destroy()
 	defer p.P11.Finalize()
 	defer p.P11.Logout(p.Session)
+	
+	p, err = objects.ListObjectsMenu(p)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-
-	// slots, err := processSlots(p)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// slot, err := selectSlot(slots)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// fmt.Printf("Slot selected: %d\n", slot)
-
-	// session, err := p.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	// if err != nil {
-	// 	fmt.Printf("Error opening session to slot %d: %s\n", slot, err)
-	// 	return
-	// }
-	// defer p.CloseSession(session)
-	// fmt.Printf("Session successfully opened (session %d)\n", session)
-
-	// password, err := getPassword()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	// err = p.Login(session, pkcs11.CKU_USER, password)
-	// if err != nil {
-	// 	fmt.Printf("Error during login: %s\n", err)
-	// 	return
-	// }
+	fmt.Println("Session: ", p.Session)
+	fmt.Println("Selected: ", p.Selected)
 	
 	// selection, err := printMenu(session, slot)
 	// if err != nil {
