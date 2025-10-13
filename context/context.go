@@ -44,6 +44,7 @@ func InitializeContext() (*AppContext, error) {
 	ap := &AppContext{
 		P11: p,
 		Session: *session,
+		Slot: slot,
 	}
 	return ap, nil
 }
@@ -90,7 +91,6 @@ func selectSlot(slots []uint) (uint, error) {
 	}
 
 	slot := slots[selection]
-	fmt.Println("Slot selected: ", slots[selection])
 
 	return slot, nil
 }
