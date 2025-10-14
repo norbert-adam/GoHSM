@@ -5,7 +5,6 @@ import (
 	"errors"
 	"encoding/binary"
 
-	"github.com/GoHSM/utils"
 	"github.com/GoHSM/context"
 
 	"github.com/miekg/pkcs11"
@@ -28,7 +27,7 @@ func listAttributes(p *context.AppContext, objList []pkcs11.ObjectHandle) error 
 
 		fmt.Printf("Object handle %v:\n", obj)
 		for _, a := range attrs {
-			fmt.Printf("\t%v\n", utils.AttrToString(a))
+			fmt.Printf("\t%v\n", AttrToString(a))
 		}
 	}
 	

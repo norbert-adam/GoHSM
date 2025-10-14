@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"errors"
 
-	"github.com/GoHSM/utils"
 	"github.com/GoHSM/context"
 
 	"github.com/miekg/pkcs11"
@@ -144,7 +143,7 @@ func SelectObject(p *context.AppContext, objectList []pkcs11.ObjectHandle) (pkcs
 			newErr := fmt.Sprint("Error getting attributes: ", err)
 			return 0, errors.New(newErr)
 		}
-		fmt.Printf("%d. Object: %v (object handle: %d / label %s)\n", i, utils.AttrToString(attrs[0]), obj, attrs[1].Value)
+		fmt.Printf("%d. Object: %v (object handle: %d / label %s)\n", i, AttrToString(attrs[0]), obj, attrs[1].Value)
 	}
 
 	_, err := fmt.Scan(&selection)
