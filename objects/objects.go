@@ -132,12 +132,13 @@ func selectAction() (string, error) {
 func SelectObject(p *context.AppContext, objectList []pkcs11.ObjectHandle) (pkcs11.ObjectHandle, error) {
 	
 	var selection int
-	fmt.Println("Select the key that you want to use: ")
+	fmt.Println("Select the object: ")
 	for i, obj := range objectList {
-		attrTemplate := []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+		objType, err := getObjectType(p, obj)
+		if err != nil {
+			return 0, err
 		}
+		attrTemplate := getAttributeTemplate("short", objType)
 
 		attrs, err := p.P11.GetAttributeValue(p.Session, obj, attrTemplate)
 		if err != nil {
@@ -185,9 +186,7 @@ func ListObjects(p *context.AppContext, searchOption string) ([]pkcs11.ObjectHan
 			break
 		}
 
-		attr, err := ctx.GetAttributeValue(session, objs[0], []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-		})
+		objectType, err := getObjectType(p, objs[0])
 		if err != nil {
 			return nil, err
 		}
@@ -196,15 +195,11 @@ func ListObjects(p *context.AppContext, searchOption string) ([]pkcs11.ObjectHan
 		case "All":
 			foundObjs = append(foundObjs, objs[0])
 		case "Keys":
-			a := attr[0]
-			aVal := binary.LittleEndian.Uint32(a.Value[:4])
-			if aVal == pkcs11.CKO_SECRET_KEY || aVal == pkcs11.CKO_PUBLIC_KEY || aVal == pkcs11.CKO_PRIVATE_KEY {
+			if objectType == pkcs11.CKO_SECRET_KEY || objectType == pkcs11.CKO_PUBLIC_KEY || objectType == pkcs11.CKO_PRIVATE_KEY {
 				foundObjs = append(foundObjs, objs[0])
 			}
 		case "Certs":
-			a := attr[0]
-			aVal := binary.LittleEndian.Uint32(a.Value[:4])
-			if aVal == pkcs11.CKO_CERTIFICATE {
+			if objectType == pkcs11.CKO_CERTIFICATE {
 				foundObjs = append(foundObjs, objs[0])
 			}
 		}	
@@ -215,16 +210,16 @@ func ListObjects(p *context.AppContext, searchOption string) ([]pkcs11.ObjectHan
 
 func listAttributes(p *context.AppContext, objList []pkcs11.ObjectHandle) error {
 	for _, obj := range objList {
-		attr, err := p.P11.GetAttributeValue(p.Session, obj, []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-		})
+		objectType, err := getObjectType(p, obj)
 		if err != nil {
 			return err
 		}
 
-		attrs, err := getObjectAttributes(p, obj, attr[0])
+		attrTemplate := getAttributeTemplate("medium", objectType)
+
+		attrs, err := p.P11.GetAttributeValue(p.Session, obj, attrTemplate)
 		if err != nil {
-			newErr := fmt.Sprintf("Error reading object %v: %v\n", obj, err)
+			newErr := fmt.Sprintf("Error getting attributes for object %d: %v", obj, err)
 			return errors.New(newErr)
 		}
 
@@ -238,43 +233,64 @@ func listAttributes(p *context.AppContext, objList []pkcs11.ObjectHandle) error 
 }
 
 
-func getObjectAttributes(p *context.AppContext, key pkcs11.ObjectHandle, keyType *pkcs11.Attribute) ([]*pkcs11.Attribute, error ){
-	var attrList []*pkcs11.Attribute
-	switch binary.LittleEndian.Uint32(keyType.Value[:4]) {
-	case pkcs11.CKO_SECRET_KEY:
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, nil),
-		}
-	case pkcs11.CKO_PUBLIC_KEY:
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, nil),
-		}
-	case pkcs11.CKO_PRIVATE_KEY:
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-		}
-	case pkcs11.CKO_CERTIFICATE:
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_ISSUER, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_SERIAL_NUMBER, nil),
-		}
-	}
-	attrs, err := p.P11.GetAttributeValue(p.Session, key, attrList)
+func getObjectType(p *context.AppContext, object pkcs11.ObjectHandle) (uint32, error) {
+	attrs, err := p.P11.GetAttributeValue(p.Session, object, []*pkcs11.Attribute{
+        pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
+    })
 	if err != nil {
-		newErr := fmt.Sprintf("Error getting attributes for object %d: %v", key, err)
-		return nil, errors.New(newErr)
+		newErr := fmt.Sprint("Error getting object type: ", err)
+		return 0, errors.New(newErr)
 	}
 
-	return attrs, nil
+	if len(attrs) == 0 || len(attrs[0].Value) == 0 {
+        return 0, fmt.Errorf("empty CKA_CLASS value")
+    }
+
+	class := binary.LittleEndian.Uint32(attrs[0].Value[:4])
+	return class, nil
+}
+
+
+func getAttributeTemplate(templateType string, objectType uint32) []*pkcs11.Attribute {
+	switch templateType {
+	case "short":
+		return []*pkcs11.Attribute{
+			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
+			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+		}
+	case "medium":
+		switch objectType {
+		case pkcs11.CKO_SECRET_KEY:
+			return []*pkcs11.Attribute{
+				pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, nil),
+			}
+		case pkcs11.CKO_PUBLIC_KEY:
+			return []*pkcs11.Attribute{
+				pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, nil),
+			}
+		case pkcs11.CKO_PRIVATE_KEY:
+			return []*pkcs11.Attribute{
+				pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
+			}
+		case pkcs11.CKO_CERTIFICATE:
+			return []*pkcs11.Attribute{
+				pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_ISSUER, nil),
+				pkcs11.NewAttribute(pkcs11.CKA_SERIAL_NUMBER, nil),
+			}
+		}
+	case "long":
+		return nil
+	}
+	return nil
 }
