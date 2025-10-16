@@ -18,19 +18,21 @@ import (
 	"errors"
 	"fmt"
 
-	// "github.com/GoHSM/objects"
+	"github.com/GoHSM/userif"
 	"github.com/GoHSM/context"
+	"github.com/GoHSM/generate"
 	"github.com/GoHSM/objects"
 	// "github.com/GoHSM/generate"
 	// "github.com/GoHSM/aes"
 	// "github.com/GoHSM/utils"
-
-	"github.com/miekg/pkcs11"
+	// "github.com/miekg/pkcs11"
 )
 
 
 func main() {
 
+	userif.ClearTerminal()
+	fmt.Println("WELCOME TO GOHSM!")
 	// Initialize PKCS11 module/library
 	p, err := context.InitializeContext()
 	if err != nil {
@@ -41,18 +43,72 @@ func main() {
 	defer p.P11.Finalize()
 	defer p.P11.Logout(p.Session)
 	
-	p, err = objects.ListObjectsMenu(p)
+	userif.ClearTerminal()		
+	selection, err := printMenu(p)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println("Context:")
-	fmt.Printf("\tSession: %d\n", p.Session)
-	fmt.Printf("\tSelected: %d\n", p.Session)
-	fmt.Printf("\tAction: %s\n", p.Action)	
+	switch selection {
+	case "List":
+		userif.ClearTerminal()
+		p, err = objects.ListObjectsMenu(p)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	case "Generate":
+		userif.ClearTerminal()
+		fmt.Println("Generate was selected.")
+	case "Delete":
+		// TODO: move this to a generate/delete package
+		userif.ClearTerminal()
+		objs, err := objects.ListObjects(p, "All")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		obj, err := objects.SelectObject(p, objs)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = generate.DeleteObject(p, obj)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Object %d successfully deleted!\n", obj)
+	case "Encrypt":
+		p.Action = selection
+		nextAction, err := optionSelectGenerate()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-	printMenu(p)
+		switch nextAction {
+		case "Select":
+			objs, err := objects.ListObjects(p, "Keys")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			selObj, err := objects.SelectObject(p, objs)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("Selected object: ", selObj)
+		case "Generate":
+			fmt.Println("Encrypt --> Generate.")
+		}
+		fmt.Println("Encrypt was selected.")
+
+	default:
+		fmt.Println("Others were selected.")
+	}
 }
 
 
@@ -69,7 +125,7 @@ func printMenu(p *context.AppContext) (string, error) {
 		9: "Verify",
 	}
 
-	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", slot, p.Session)
+	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", p.Slot, p.Session)
 	fmt.Printf("Available actions: \n")
 	fmt.Printf("\t1. List All Objects\n")
 	fmt.Printf("\t2. Generate Object\n")
@@ -95,3 +151,26 @@ func printMenu(p *context.AppContext) (string, error) {
 	return options[selection], nil
 }
 
+func optionSelectGenerate() (string, error) {
+	
+	var selection int
+	fmt.Println("Use key from HSM or generate new key?")
+	fmt.Printf("\t1. Select key from HSM\n")
+	fmt.Printf("\t2. Generate new key\n")
+
+	_, err := fmt.Scan(&selection)
+	
+	if err != nil {
+		newErr := fmt.Sprint("Error reading input: ", err)
+		return "", errors.New(newErr)
+	}
+
+	switch selection {
+	case 1:
+		return "Select", nil
+	case 2:
+		return "Generate", nil
+	default:
+		return "", errors.New("Invalid selection - input must be 1 or 2.")
+	}
+}

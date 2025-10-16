@@ -9,7 +9,7 @@ import (
 
 func ListObjectsMenu(p *context.AppContext) (*context.AppContext, error) {
 	
-	selection, err := selectOption()
+	selection, err := selectObjectType()
 	if err != nil {
 		return nil, err
 	}
@@ -18,7 +18,6 @@ func ListObjectsMenu(p *context.AppContext) (*context.AppContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Returned object list: ", objList)
 
 	err = listAttributes(p, objList)
 	if err != nil {
