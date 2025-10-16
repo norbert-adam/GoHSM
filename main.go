@@ -99,7 +99,9 @@ func main() {
 			fmt.Println("Encrypt --> Generate.")
 		}
 		fmt.Println("Encrypt was selected.")
-
+	case "Exit":
+		fmt.Println("Exiting GoHSM... Goodbye!")
+		return
 	default:
 		fmt.Println("Others were selected.")
 	}
@@ -117,6 +119,7 @@ func printMenu(p *context.AppContext) (string, error) {
 		7: "Unwrap",
 		8: "Sign",
 		9: "Verify",
+		10: "Exit",
 	}
 
 	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", p.Slot, p.Session)
@@ -130,6 +133,7 @@ func printMenu(p *context.AppContext) (string, error) {
 	fmt.Printf("\t7. Unwrap\n")
 	fmt.Printf("\t8. Sign\n")
 	fmt.Printf("\t9. Verify\n")
+	fmt.Printf("\t10. Exit\n")
 
 	var selection int
 	_, err := fmt.Scan(&selection)
