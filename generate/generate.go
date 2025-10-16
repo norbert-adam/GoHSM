@@ -4,9 +4,21 @@ import (
 	"fmt"
 	"errors"
 
+	"github.com/GoHSM/context"
+	// "github.com/GoHSM/objects"
+
 	"github.com/miekg/pkcs11"
 )
 
+
+func DeleteObject(p *context.AppContext, obj pkcs11.ObjectHandle) error {
+	err := p.P11.DestroyObject(p.Session, obj)
+	if err != nil {
+		newErr := fmt.Sprint("Error destroying object: ", err)
+		return errors.New(newErr)
+	}
+	return nil
+}
 
 
 func GenDetails() (int, error) {
