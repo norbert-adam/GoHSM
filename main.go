@@ -14,7 +14,6 @@ package main
 // TODO: rewrite generating functions to check for whether key size is provided or not, if not, query for value
 
 import (
-	// "encoding/binary"
 	"errors"
 	"fmt"
 
@@ -22,18 +21,13 @@ import (
 	"github.com/GoHSM/context"
 	"github.com/GoHSM/generate"
 	"github.com/GoHSM/objects"
-	// "github.com/GoHSM/generate"
-	// "github.com/GoHSM/aes"
-	// "github.com/GoHSM/utils"
-	// "github.com/miekg/pkcs11"
 )
 
 
 func main() {
 
 	userif.ClearTerminal()
-	fmt.Println("WELCOME TO GOHSM!")
-	// Initialize PKCS11 module/library
+	printLogo()
 	p, err := context.InitializeContext()
 	if err != nil {
 		fmt.Println(err)
@@ -173,4 +167,22 @@ func optionSelectGenerate() (string, error) {
 	default:
 		return "", errors.New("Invalid selection - input must be 1 or 2.")
 	}
+}
+
+func printLogo() {
+	logo := `░░      ░░░░      ░░░  ░░░░  ░░░      ░░░  ░░░░  ░░░░░░░
+▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒   ▒▒   ▒▒▒▒▒▒▒
+▓  ▓▓▓   ▓▓  ▓▓▓▓  ▓▓        ▓▓▓      ▓▓▓        ▓▓▓▓▓▓▓
+█  ████  ██  ████  ██  ████  ████████  ██  █  █  ███████
+██      ████      ███  ████  ███      ███  ████  ███████
+                                                        `
+	
+	fmt.Println("")													
+	fmt.Print(logo)
+	fmt.Println("")
+
+	fmt.Printf("\t-----------------\n")
+	fmt.Printf("\tWELCOME TO GOHSM!\n")
+	fmt.Printf("\t-----------------\n")
+	fmt.Println("")
 }
