@@ -8,6 +8,28 @@ import (
 	"os"
 )
 
+
+func GetFilenName() (string, string, error) {
+	var inputFile string
+	var outputFile string
+	fmt.Println("Provide the path to the file you want to encrypt: ")
+	_, err := fmt.Scan(&inputFile)
+	if err != nil {
+		newErr := fmt.Sprint("Error reading input: ", err)
+		return "", "", errors.New(newErr)
+	}
+
+	fmt.Println("Provide the output file's name (leave empty for default): ")
+	_, err = fmt.Scan(&outputFile)
+	if err != nil {
+		newErr := fmt.Sprint("Error reading input: ", err)
+		return "", "", errors.New(newErr)
+	}
+
+	return inputFile, outputFile, nil
+}
+
+
 func ReadFile(path string, data []byte) ([]byte, error) {
 		
 	file, err := os.Open(path)
