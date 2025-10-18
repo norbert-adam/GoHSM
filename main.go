@@ -5,114 +5,135 @@ package main
 // TODO: Create a map of the slot indexes, slot IDs, and maybe slot labels
 // TODO: Check for invalid slots - e.g., in SoftHSM, there is always 1 slot that is not initialized/has no label
 // TODO: Implement logging
+// Select from options:
+// list all objects,
+// key generation/deletion,
+// encryption/decryption,
+// wrapping/unwrapping,
+// sing/verify.
+// TODO: rewrite generating functions to check for whether key size is provided or not, if not, query for value
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 
-	"github.com/GoHSM/utils"
+	"github.com/GoHSM/userif"
+	"github.com/GoHSM/context"
+	"github.com/GoHSM/generate"
 	"github.com/GoHSM/objects"
-	"github.com/miekg/pkcs11"
-	// "github.com/GoHSM/utils"
 )
+
 
 func main() {
 
-	// Initialize PKCS11 module/library
-	p := pkcs11.New("/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so")
-	err := p.Initialize()
-	if err != nil {
-		fmt.Println("Error loading pkcs11 module: ", err)
-		return
-	}
-	defer p.Destroy()
-	defer p.Finalize()
-
-	fmt.Println("PKCS11 Module successfully initialized!")
-
-	slots, err := processSlots(p)
+	userif.ClearTerminal()
+	printLogo()
+	p, err := context.InitializeContext()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	slot, err := selectSlot(slots)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Printf("Slot selected: %d\n", slot)
-
-	session, err := p.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	if err != nil {
-		fmt.Printf("Error opening session to slot %d: %s\n", slot, err)
-		return
-	}
-	defer p.CloseSession(session)
-	fmt.Printf("Session successfully opened (session %d)\n", session)
-
-	password, err := getPassword()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	err = p.Login(session, pkcs11.CKU_USER, password)
-	if err != nil {
-		fmt.Printf("Error during login: %s\n", err)
-		return
-	}
-	defer p.Logout(session)
-	fmt.Println("Successful login!")
-
-	// Select from options:
-	// list all objects,
-	// key generation/deletion,
-	// encryption/decryption,
-	// wrapping/unwrapping,
-	// sing/verify.
-
-	selection, err := printMenu(session, slot)
+	defer p.P11.Destroy()
+	defer p.P11.Finalize()
+	defer p.P11.Logout(p.Session)
+	
+	userif.ClearTerminal()		
+	selection, err := printMenu(p)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	switch selection {
-	case "listObjs", "listKeys",  "listCerts":
-		objects.ListObjects(p, session, selection)
-	case "genDel":
-		fmt.Println("Generate/Delete selected.")
-	case "encDec":
-		fmt.Println("Encryption/Decryption selected.")
-	case "wrapUnwr":
-		fmt.Println("Wrap/Unwrap selected.")
-	case "signVer":
-		fmt.Println("Sign/Verify selected.")
+	case "List":
+		userif.ClearTerminal()
+		p, err = objects.ListObjectsMenu(p)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	case "Generate":
+		userif.ClearTerminal()
+		fmt.Println("Generate was selected.")
+	case "Delete":
+		// TODO: move this to a generate/delete package
+		userif.ClearTerminal()
+		objs, err := objects.ListObjects(p, "All")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		obj, err := objects.SelectObject(p, objs)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = generate.DeleteObject(p, obj)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Object %d successfully deleted!\n", obj)
+	case "Encrypt":
+		p.Action = selection
+		nextAction, err := optionSelectGenerate()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		switch nextAction {
+		case "Select":
+			objs, err := objects.ListObjects(p, "Keys")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			selObj, err := objects.SelectObject(p, objs)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("Selected object: ", selObj)
+		case "Generate":
+			fmt.Println("Encrypt --> Generate.")
+		}
+		fmt.Println("Encrypt was selected.")
+	case "Exit":
+		fmt.Println("Exiting GoHSM... Goodbye!")
+		return
+	default:
+		fmt.Println("Others were selected.")
 	}
 }
 
 
-func printMenu(session pkcs11.SessionHandle, slot uint) (string, error) {
+func printMenu(p *context.AppContext) (string, error) {
 	options := map[int]string{
-		1: "listObjs",
-		2: "listKeys",
-		3: "listCerts",
-		4: "genDel",
-		5: "encDec",
-		6: "wrapUnwr",
-		7: "signVer",
+		1: "List",
+		2: "Generate",
+		3: "Delete",
+		4: "Encrypt",
+		5: "Decrypt",
+		6: "Wrap",
+		7: "Unwrap",
+		8: "Sign",
+		9: "Verify",
+		10: "Exit",
 	}
 
-	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", slot, session)
+	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", p.Slot, p.Session)
 	fmt.Printf("Available actions: \n")
 	fmt.Printf("\t1. List All Objects\n")
-	fmt.Printf("\t2. List Keys\n")
-	fmt.Printf("\t3. List Certificates\n")
-	fmt.Printf("\t4. Generate/Delete Object\n")
-	fmt.Printf("\t5. Encrypt/decrypt\n")
-	fmt.Printf("\t6. Wrap/Unwrap\n")
-	fmt.Printf("\t7. Sign/verify\n")
+	fmt.Printf("\t2. Generate Object\n")
+	fmt.Printf("\t3. Delete Object\n")
+	fmt.Printf("\t4. Encrypt\n")
+	fmt.Printf("\t5. Decrypt\n")
+	fmt.Printf("\t6. Wrap\n")
+	fmt.Printf("\t7. Unwrap\n")
+	fmt.Printf("\t8. Sign\n")
+	fmt.Printf("\t9. Verify\n")
+	fmt.Printf("\t10. Exit\n")
 
 	var selection int
 	_, err := fmt.Scan(&selection)
@@ -120,66 +141,52 @@ func printMenu(session pkcs11.SessionHandle, slot uint) (string, error) {
 		newErr := fmt.Sprintf("Incorrect input: %v", err)
 		return "", errors.New(newErr)
 	}
-	if selection < 1 || selection > 5 {
-		return "", errors.New("incorrect input - selected option must be between 1 and 5")
+	if selection < 1 || selection > len(options) {
+		newErr := fmt.Sprintf("incorrect input - selected option must be between 1 and %d", len(options))
+		return "", errors.New(newErr)
 	}
 
 	return options[selection], nil
 }
 
-func getPassword() (string, error) {
-	fmt.Printf("Being login process - please provide password: ")
-	var pwd string
-	_, err := fmt.Scan(&pwd)
+func optionSelectGenerate() (string, error) {
+	
+	var selection int
+	fmt.Println("Use key from HSM or generate new key?")
+	fmt.Printf("\t1. Select key from HSM\n")
+	fmt.Printf("\t2. Generate new key\n")
+
+	_, err := fmt.Scan(&selection)
+	
 	if err != nil {
-		newErr := fmt.Sprintf("Invalid password provided: %s\n", err)
+		newErr := fmt.Sprint("Error reading input: ", err)
 		return "", errors.New(newErr)
 	}
 
-	return pwd, nil
+	switch selection {
+	case 1:
+		return "Select", nil
+	case 2:
+		return "Generate", nil
+	default:
+		return "", errors.New("Invalid selection - input must be 1 or 2.")
+	}
 }
 
-func processSlots(p *pkcs11.Ctx) ([]uint, error) {
+func printLogo() {
+	logo := `░░      ░░░░      ░░░  ░░░░  ░░░      ░░░  ░░░░  ░░░░░░░
+▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒   ▒▒   ▒▒▒▒▒▒▒
+▓  ▓▓▓   ▓▓  ▓▓▓▓  ▓▓        ▓▓▓      ▓▓▓        ▓▓▓▓▓▓▓
+█  ████  ██  ████  ██  ████  ████████  ██  █  █  ███████
+██      ████      ███  ████  ███      ███  ████  ███████
+                                                        `
+	
+	fmt.Println("")													
+	fmt.Print(logo)
+	fmt.Println("")
 
-	slots, err := p.GetSlotList(true)
-	if err != nil {
-		newErr := fmt.Sprintf("Error listing slots: %s\n", err)
-		return nil, errors.New(newErr)
-	}
-
-	fmt.Println("Available slots:")
-	for i, slot := range slots {
-		tInfo, err := p.GetTokenInfo(slot)
-		if err != nil {
-			newErr := fmt.Sprintf("Error loading token info: %s\n", err)
-			return nil, errors.New(newErr)
-		}
-		var label string
-		if tInfo.Label == "" {
-			label = "N/A"
-		} else {
-			label = tInfo.Label
-		}
-		fmt.Printf("\t%d. Slot: %s (%d)\n", i, label, slot)
-	}
-	return slots, nil
-}
-
-func selectSlot(slots []uint) (uint, error) {
-
-	fmt.Printf("Select slot: ")
-	var selection int
-	_, err := fmt.Scan(&selection)
-	if err != nil {
-		newErr := fmt.Sprintf("Invalid input for slot selection: %s\n", err)
-		return 0, errors.New(newErr)
-	}
-
-	if selection > len(slots)-1 || selection < 0 {
-		return 0, errors.New("Invalid input for slot selection")
-	}
-
-	slot := slots[selection]
-
-	return slot, nil
+	fmt.Printf("\t-----------------\n")
+	fmt.Printf("\tWELCOME TO GOHSM!\n")
+	fmt.Printf("\t-----------------\n")
+	fmt.Println("")
 }

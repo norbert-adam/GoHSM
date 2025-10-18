@@ -3,118 +3,87 @@ package objects
 import (
 	"fmt"
 	"errors"
-	"encoding/binary"
 
-	"github.com/GoHSM/utils"
+	"github.com/GoHSM/context"
 
 	"github.com/miekg/pkcs11"
 )
 
+func ListObjects(p *context.AppContext, searchOption string) ([]pkcs11.ObjectHandle, error) {
 
-func ListObjects(p *pkcs11.Ctx, session pkcs11.SessionHandle, searchOption string) {
-
+	ctx := p.P11
+	session := p.Session
 	foundObjs := []pkcs11.ObjectHandle{}
 
-	err := p.FindObjectsInit(session, []*pkcs11.Attribute{})
+	err := ctx.FindObjectsInit(session, []*pkcs11.Attribute{})
 	if err != nil {
-		fmt.Println("Error initializing FindObjects: ", err)
-		return
+		newErr := fmt.Sprint("Error initializing FindObjects: ", err)
+		return nil, errors.New(newErr)
 	}
-	defer p.FindObjectsFinal(session)
+	defer ctx.FindObjectsFinal(session)
 
 	for {
-		objs, _, err := p.FindObjects(session, 1)
+		objs, _, err := ctx.FindObjects(session, 1)
 		if err != nil {
-			fmt.Println("Error finding objects.")
-			return
+			newErr := fmt.Sprint("Error finding objects: ", err)
+			return nil, errors.New(newErr)
 		}
 
 		if len(objs) == 0 {
 			break
 		}
 
-		obj := objs[0]
-		attr, err := p.GetAttributeValue(session, obj, []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-		})
+		objectType, err := getObjectType(p, objs[0])
 		if err != nil {
-			return
+			return nil, err
+
 		}
 
 		switch searchOption {
-		case "listObjs":
-			foundObjs = append(foundObjs, obj)
-		case "listKeys":
-			a := attr[0]
-			aVal := binary.LittleEndian.Uint32(a.Value[:4])
-			if aVal == pkcs11.CKO_SECRET_KEY || aVal == pkcs11.CKO_PUBLIC_KEY || aVal == pkcs11.CKO_PRIVATE_KEY {
-				foundObjs = append(foundObjs, obj)
+		case "All":
+			foundObjs = append(foundObjs, objs[0])
+		case "Keys":
+			if objectType == pkcs11.CKO_SECRET_KEY || objectType == pkcs11.CKO_PUBLIC_KEY || objectType == pkcs11.CKO_PRIVATE_KEY {
+				foundObjs = append(foundObjs, objs[0])
 			}
-		case "listCerts":
-			a := attr[0]
-			aVal := binary.LittleEndian.Uint32(a.Value[:4])
-			if aVal == pkcs11.CKO_CERTIFICATE {
-				foundObjs = append(foundObjs, obj)
+		case "Certs":
+			if objectType == pkcs11.CKO_CERTIFICATE {
+				foundObjs = append(foundObjs, objs[0])
 			}
 		}	
 	}
-
-	fmt.Println("found: ", foundObjs)
-
-	for _, obj := range foundObjs {
-		attr, err := p.GetAttributeValue(session, obj, []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-		})
-		if err != nil {
-			return
-		}
-
-		attrs, err := getKeyAttributes(p, session, obj, attr[0])
-		if err != nil {
-			fmt.Printf("Error reading object %v: %v\n", obj, err)
-			return
-		}
-
-		fmt.Printf("Object handle %v:\n", obj)
-		for _, a := range attrs {
-			fmt.Printf("\t%v\n", utils.AttrToString(a))
-		}
-	}
+	
+	return foundObjs, nil
 }
 
+func SelectObject(p *context.AppContext, objectList []pkcs11.ObjectHandle) (pkcs11.ObjectHandle, error) {
+	
+	var selection int
+	fmt.Println("Select the object: ")
+	for i, obj := range objectList {
+		objType, err := getObjectType(p, obj)
+		if err != nil {
+			return 0, err
+		}
+		attrTemplate := getAttributeTemplate("short", objType)
 
-func getKeyAttributes(p *pkcs11.Ctx, session pkcs11.SessionHandle, key pkcs11.ObjectHandle, keyType *pkcs11.Attribute) ([]*pkcs11.Attribute, error ){
-	var attrList []*pkcs11.Attribute
-	switch binary.LittleEndian.Uint32(keyType.Value[:4]) {
-	case pkcs11.CKO_SECRET_KEY:
-		fmt.Println("Secret key")
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, nil),
+		attrs, err := p.P11.GetAttributeValue(p.Session, obj, attrTemplate)
+		if err != nil {
+			newErr := fmt.Sprint("Error getting attributes: ", err)
+			return 0, errors.New(newErr)
 		}
-	case pkcs11.CKO_PUBLIC_KEY:
-		fmt.Println("Public key")
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, nil),
-		}
-	case pkcs11.CKO_PRIVATE_KEY:
-		fmt.Println("Private key")
-		attrList = []*pkcs11.Attribute{
-			pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_LABEL, nil),
-			pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
-		}
+		fmt.Printf("%d. Object: %v (object handle: %d / label %s)\n", i, AttrToString(attrs[0]), obj, attrs[1].Value)
 	}
-	attrs, err := p.GetAttributeValue(session, key, attrList)
+
+	_, err := fmt.Scan(&selection)
 	if err != nil {
-		newErr := fmt.Sprintf("Error getting attributes for object %d: %v", key, err)
-		return nil, errors.New(newErr)
+		newErr := fmt.Sprintf("Incorrect input: %v", err)
+		return 0, errors.New(newErr)
+	}
+	if selection < 0 || selection > len(objectList) {
+		newErr := fmt.Sprintf("incorrect input - selected option must be between 0 and %d", len(objectList)-1)
+		return 0, errors.New(newErr)
 	}
 
-	return attrs, nil
+	return objectList[selection], nil
 }
