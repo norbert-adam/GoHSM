@@ -9,7 +9,29 @@ import (
 )
 
 
-func GetFilenName() (string, string, error) {
+func ReadStdin(data []byte) ([]byte, error) {
+	buf := make([]byte, 4096)
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			data = append(data, buf[:n]...)	
+		}
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			newErr := fmt.Sprint("Error reading input: ", err)
+			return nil, errors.New(newErr)
+		}
+	}
+
+	return data, nil
+}
+
+
+func GetFileName() (string, string, error) {
 	var inputFile string
 	var outputFile string
 	fmt.Println("Provide the path to the file you want to encrypt: ")
