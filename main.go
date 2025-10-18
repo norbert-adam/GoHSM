@@ -55,7 +55,11 @@ func main() {
 			return
 		}
 	case "Generate", "Delete":
-		generate.GenDelWorkflow(p, selection)
+		_, err := generate.GenDelWorkflow(p, selection)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	case "Encrypt":
 		p.Action = selection
 		nextAction, err := userif.OptionSelectGenerate()
@@ -113,7 +117,7 @@ func printMenu(p *context.AppContext) (string, error) {
 
 	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", p.Slot, p.Session)
 	fmt.Printf("Available actions: \n")
-	fmt.Printf("\t1. List All Objects\n")
+	fmt.Printf("\t1. List Objects\n")
 	fmt.Printf("\t2. Generate Object\n")
 	fmt.Printf("\t3. Delete Object\n")
 	fmt.Printf("\t4. Encrypt\n")
