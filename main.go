@@ -54,31 +54,11 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-	case "Generate":
-		userif.ClearTerminal()
-		fmt.Println("Generate was selected.")
-	case "Delete":
-		// TODO: move this to a generate/delete package
-		userif.ClearTerminal()
-		objs, err := objects.ListObjects(p, "All")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		obj, err := objects.SelectObject(p, objs)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		err = generate.DeleteObject(p, obj)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Object %d successfully deleted!\n", obj)
+	case "Generate", "Delete":
+		generate.GenDelWorkflow(p, selection)
 	case "Encrypt":
 		p.Action = selection
-		nextAction, err := optionSelectGenerate()
+		nextAction, err := userif.OptionSelectGenerate()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -156,30 +136,6 @@ func printMenu(p *context.AppContext) (string, error) {
 	}
 
 	return options[selection], nil
-}
-
-func optionSelectGenerate() (string, error) {
-	
-	var selection int
-	fmt.Println("Use key from HSM or generate new key?")
-	fmt.Printf("\t1. Select key from HSM\n")
-	fmt.Printf("\t2. Generate new key\n")
-
-	_, err := fmt.Scan(&selection)
-	
-	if err != nil {
-		newErr := fmt.Sprint("Error reading input: ", err)
-		return "", errors.New(newErr)
-	}
-
-	switch selection {
-	case 1:
-		return "Select", nil
-	case 2:
-		return "Generate", nil
-	default:
-		return "", errors.New("Invalid selection - input must be 1 or 2.")
-	}
 }
 
 func printLogo() {
