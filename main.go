@@ -17,10 +17,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GoHSM/userif"
 	"github.com/GoHSM/context"
+	"github.com/GoHSM/encrypt"
 	"github.com/GoHSM/generate"
 	"github.com/GoHSM/objects"
+	"github.com/GoHSM/userif"
+	"github.com/miekg/pkcs11"
 )
 
 
@@ -95,9 +97,16 @@ func main() {
 				return
 			}
 			fmt.Println("Selected object: ", selObj)
+			p.Selected = selObj
 		case "Generate":
 			fmt.Println("Encrypt --> Generate.")
 		}
+		err = encrypt.EncryptAes(p, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_AES_CBC, nil)})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		
 		fmt.Println("Encrypt was selected.")
 	case "Exit":
 		fmt.Println("Exiting GoHSM... Goodbye!")
