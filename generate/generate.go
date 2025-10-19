@@ -21,12 +21,12 @@ func DeleteObject(p *context.AppContext, obj pkcs11.ObjectHandle) error {
 }
 
 
-func GenerateAES(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHandle, error){
+func GenerateAES(p *context.AppContext) (pkcs11.ObjectHandle, error){
 	var keySize int	
 	var keyLabel string
 	tok := "N"
 	var keyToken bool
-	fmt.Println("AES generation called.")
+	fmt.Println("AES KEY GENERATION:")
 	fmt.Println("Specify the attributes of the key:")
 	fmt.Printf("\tAES key size in bits (128-256):\t")
 	fmt.Scan(&keySize)
@@ -56,7 +56,7 @@ func GenerateAES(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHand
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, keyToken),
 	}
 
-	aesKey, err := p.GenerateKey(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_AES_KEY_GEN, nil)}, keyTemplate)
+	aesKey, err := p.P11.GenerateKey(p.Session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_AES_KEY_GEN, nil)}, keyTemplate)
 	if err != nil {
 		newError := fmt.Sprint("Error in AES key generation: ", err)
 		return 0, errors.New(newError)
@@ -65,7 +65,7 @@ func GenerateAES(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHand
 }
 
 
-func GenerateRSA(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHandle, pkcs11.ObjectHandle, error) {
+func GenerateRSA(p *context.AppContext) (pkcs11.ObjectHandle, pkcs11.ObjectHandle, error) {
 	fmt.Println("RSA generation called.")
 
 	var keySize int	
@@ -88,7 +88,6 @@ func GenerateRSA(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHand
 		keyToken = false
 	}
 
-	// // Example: generate a key pair
 	pubTempl := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_LABEL, keyLabelPub),
 		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
@@ -109,7 +108,7 @@ func GenerateRSA(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHand
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
 	}
 
-	pub, priv, err := p.GenerateKeyPair(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)}, pubTempl, privTempl,)
+	pub, priv, err := p.P11.GenerateKeyPair(p.Session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)}, pubTempl, privTempl,)
 	if err != nil {
 		newError := fmt.Sprint("Error in RSA keypair generation: ", err)
 		return 0, 0, errors.New(newError)
@@ -119,7 +118,7 @@ func GenerateRSA(p *pkcs11.Ctx, session pkcs11.SessionHandle) (pkcs11.ObjectHand
 }
 
 
-func GenerateECC(p *pkcs11.Ctx, session pkcs11.SessionHandle) {
+func GenerateECC(p *context.AppContext) (pkcs11.ObjectHandle, pkcs11.ObjectHandle, error){
 	oidP256 := []byte{0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07} // 1.2.840.10045.3.1.7
 
 	pubTempl := []*pkcs11.Attribute{
@@ -138,16 +137,12 @@ func GenerateECC(p *pkcs11.Ctx, session pkcs11.SessionHandle) {
 		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
 	}
 
-	pub, priv, err := p.GenerateKeyPair(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_EC_KEY_PAIR_GEN, nil)}, pubTempl, privTempl,)
+	pub, priv, err := p.P11.GenerateKeyPair(p.Session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_EC_KEY_PAIR_GEN, nil)}, pubTempl, privTempl,)
 	if err != nil {
-		fmt.Println("Error in ECC key pair generation: ", err)
-		// newError := fmt.Sprint("Error in ECC keypair generation: ", err)
-		// return 0, 0, errors.New(newError)
-		return
+		newError := fmt.Sprint("Error in ECC keypair generation: ", err)
+		return 0, 0, errors.New(newError)
 	}
 
-	fmt.Println("ECC Key Pair Generation successful!")
-	fmt.Println("PubKey: ", pub)
-	fmt.Println("PrivKey: ", priv)
+	return pub, priv, nil
 }
 

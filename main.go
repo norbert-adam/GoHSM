@@ -50,7 +50,6 @@ func main() {
 	case "List":
 		userif.ClearTerminal()
 		err = objects.ListObjectsMenu(p)
-		fmt.Println("No return is needed: ", p.Selected)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -82,7 +81,6 @@ func main() {
 				return
 			}
 			fmt.Println("Selected object: ", selObj)
-			p.Selected = selObj
 		case "Generate":
 			fmt.Println("Encrypt --> Generate.")
 		}

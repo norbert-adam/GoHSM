@@ -15,12 +15,12 @@ func GenDelWorkflow(p *context.AppContext, task string) (pkcs11.ObjectHandle, er
 
 	switch task {
 	case "Delete":
-		_, err := DeleteWorkflow(p)
+		err := DeleteWorkflow(p)
 		if err != nil {
 			return 0, err
 		}
 	case "Generate":
-		_, err := GenerateWorkflow(p)
+		err := GenerateWorkflow(p)
 		if err != nil {
 			return 0, err
 		}
@@ -29,23 +29,23 @@ func GenDelWorkflow(p *context.AppContext, task string) (pkcs11.ObjectHandle, er
 }
 
 
-func DeleteWorkflow(p *context.AppContext) (pkcs11.ObjectHandle, error) {
+func DeleteWorkflow(p *context.AppContext) (error) {
 	userif.ClearTerminal()
 	objs, err := objects.ListObjects(p, "All")
 	if err != nil {
-		return 0, err
+		return err
 	}
 	obj, err := objects.SelectObject(p, objs)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	err = DeleteObject(p, obj)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	
 	fmt.Printf("Object %d successfully deleted!\n", obj)
-	return 0, nil
+	return nil
 }
 
 func GenerateWorkflow(p *context.AppContext) (error) {
@@ -61,23 +61,28 @@ func GenerateWorkflow(p *context.AppContext) (error) {
 		aesKey, err := GenerateAES(p)
 		if err != nil {
 			return err
-		}
-	
+		}	
+		p.SymKey = aesKey
 		return nil
 	case "RSA":
-		rsaPub, _, err := GenerateRSA(p)
+		rsaPub, rsaPriv, err := GenerateRSA(p)
 		if err != nil {
 			return err
 		}
+		p.AsKeyPub = rsaPub
+		p.AsKeyPriv = rsaPriv
 		return nil
 	case "ECC":
-		fmt.Println("ECC")
+		eccPub, eccPriv, err := GenerateECC(p)
+		if err != nil {
+			return err
+		}
+		p.AsKeyPub = eccPub
+		p.AsKeyPriv = eccPriv
+		return nil
 	case "EDD":
 		fmt.Println("EDD")
 	}
-
-	// TODO: replace 0 with the actual object handle
-	fmt.Printf("%s key successfully generated - key handle: %d\n", action, 0)
 
 	return nil
 }
