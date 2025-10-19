@@ -7,36 +7,36 @@ import (
 )
 
 
-func ListObjectsMenu(p *context.AppContext) (*context.AppContext, error) {
+func ListObjectsMenu(p *context.AppContext) (error) {
 	
 	selection, err := selectObjectType()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	objList, err := ListObjects(p, selection)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = listAttributes(p, objList)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	selection, err = selectAction()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	switch selection {
 	case "Exit":
-		return p, nil
+		return nil
 	case "Encrypt":
 		fmt.Println("Encrypt")
 		obj, err := SelectObject(p, objList)
 		if err != nil {
-			return p, err
+			return err
 		}
 
 		fmt.Println("Object selected: ", obj)
@@ -54,5 +54,5 @@ func ListObjectsMenu(p *context.AppContext) (*context.AppContext, error) {
 		fmt.Println("Verify")
 	}
 
-	return p, nil
+	return nil
 }

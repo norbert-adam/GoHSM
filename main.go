@@ -49,36 +49,20 @@ func main() {
 	switch selection {
 	case "List":
 		userif.ClearTerminal()
-		p, err = objects.ListObjectsMenu(p)
+		err = objects.ListObjectsMenu(p)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-	case "Generate":
-		userif.ClearTerminal()
-		fmt.Println("Generate was selected.")
-	case "Delete":
-		// TODO: move this to a generate/delete package
-		userif.ClearTerminal()
-		objs, err := objects.ListObjects(p, "All")
+	case "Generate", "Delete":
+		_, err := generate.GenDelWorkflow(p, selection)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		obj, err := objects.SelectObject(p, objs)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		err = generate.DeleteObject(p, obj)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Object %d successfully deleted!\n", obj)
 	case "Encrypt":
 		p.Action = selection
-		nextAction, err := optionSelectGenerate()
+		nextAction, err := userif.OptionSelectGenerate()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -97,7 +81,6 @@ func main() {
 				return
 			}
 			fmt.Println("Selected object: ", selObj)
-			p.Selected = selObj
 		case "Generate":
 			fmt.Println("Encrypt --> Generate.")
 		}
@@ -133,7 +116,7 @@ func printMenu(p *context.AppContext) (string, error) {
 
 	fmt.Printf("LOGGED IN TO SLOT %d (SESSION NO. %d)\n", p.Slot, p.Session)
 	fmt.Printf("Available actions: \n")
-	fmt.Printf("\t1. List All Objects\n")
+	fmt.Printf("\t1. List Objects\n")
 	fmt.Printf("\t2. Generate Object\n")
 	fmt.Printf("\t3. Delete Object\n")
 	fmt.Printf("\t4. Encrypt\n")
@@ -156,30 +139,6 @@ func printMenu(p *context.AppContext) (string, error) {
 	}
 
 	return options[selection], nil
-}
-
-func optionSelectGenerate() (string, error) {
-	
-	var selection int
-	fmt.Println("Use key from HSM or generate new key?")
-	fmt.Printf("\t1. Select key from HSM\n")
-	fmt.Printf("\t2. Generate new key\n")
-
-	_, err := fmt.Scan(&selection)
-	
-	if err != nil {
-		newErr := fmt.Sprint("Error reading input: ", err)
-		return "", errors.New(newErr)
-	}
-
-	switch selection {
-	case 1:
-		return "Select", nil
-	case 2:
-		return "Generate", nil
-	default:
-		return "", errors.New("Invalid selection - input must be 1 or 2.")
-	}
 }
 
 func printLogo() {
