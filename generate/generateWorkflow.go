@@ -20,7 +20,7 @@ func GenDelWorkflow(p *context.AppContext, task string) (pkcs11.ObjectHandle, er
 			return 0, err
 		}
 	case "Generate":
-		_, err := GenerateWorkflow()
+		_, err := GenerateWorkflow(p)
 		if err != nil {
 			return 0, err
 		}
@@ -48,28 +48,38 @@ func DeleteWorkflow(p *context.AppContext) (pkcs11.ObjectHandle, error) {
 	return 0, nil
 }
 
-
-func GenerateWorkflow() (pkcs11.ObjectHandle, error) {
+func GenerateWorkflow(p *context.AppContext) (error) {
 	userif.ClearTerminal()
 	action, err := GenDetails()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
+	userif.ClearTerminal()
 	switch action {
 	case "AES":
-		fmt.Println("AES")
+		aesKey, err := GenerateAES(p)
+		if err != nil {
+			return err
+		}
+	
+		return nil
 	case "RSA":
-		fmt.Println("RSA")
+		rsaPub, _, err := GenerateRSA(p)
+		if err != nil {
+			return err
+		}
+		return nil
 	case "ECC":
 		fmt.Println("ECC")
 	case "EDD":
 		fmt.Println("EDD")
 	}
 
+	// TODO: replace 0 with the actual object handle
 	fmt.Printf("%s key successfully generated - key handle: %d\n", action, 0)
 
-	return 0, nil
+	return nil
 }
 
 

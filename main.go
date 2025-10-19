@@ -49,7 +49,8 @@ func main() {
 	switch selection {
 	case "List":
 		userif.ClearTerminal()
-		p, err = objects.ListObjectsMenu(p)
+		err = objects.ListObjectsMenu(p)
+		fmt.Println("No return is needed: ", p.Selected)
 		if err != nil {
 			fmt.Println(err)
 			return
