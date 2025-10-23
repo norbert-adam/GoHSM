@@ -9,11 +9,13 @@ import (
 
 
 type AppContext struct {
-	P11			*pkcs11.Ctx
-	Session		pkcs11.SessionHandle
-	Slot		uint
-	Selected	pkcs11.ObjectHandle
-	Action		string
+	P11				*pkcs11.Ctx
+	Session			pkcs11.SessionHandle
+	Slot			uint
+	SymKey			pkcs11.ObjectHandle
+	AsKeyPub		pkcs11.ObjectHandle
+	AsKeyPriv		pkcs11.ObjectHandle
+	Cert			pkcs11.ObjectHandle
 }
 
  

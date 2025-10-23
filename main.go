@@ -22,7 +22,7 @@ import (
 	"github.com/GoHSM/generate"
 	"github.com/GoHSM/objects"
 	"github.com/GoHSM/userif"
-	"github.com/miekg/pkcs11"
+	// "github.com/miekg/pkcs11"
 )
 
 
@@ -39,64 +39,50 @@ func main() {
 	defer p.P11.Finalize()
 	defer p.P11.Logout(p.Session)
 	
-	userif.ClearTerminal()		
-	selection, err := printMenu(p)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 
-	switch selection {
-	case "List":
-		userif.ClearTerminal()
-		err = objects.ListObjectsMenu(p)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	case "Generate", "Delete":
-		_, err := generate.GenDelWorkflow(p, selection)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	case "Encrypt":
-		p.Action = selection
-		nextAction, err := userif.OptionSelectGenerate()
+	var selection string
+	userif.ClearTerminal()
+	mechlist, err := p.P11.GetMechanismList(p.Slot)
+	fmt.Println("Mech list: ", mechlist)
+
+	for selection != "Exit" {
+		// userif.ClearTerminal()		
+		selection, err = printMenu(p)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		switch nextAction {
-		case "Select":
-			objs, err := objects.ListObjects(p, "Keys")
+		switch selection {
+		case "List":
+			userif.ClearTerminal()
+			err = objects.ListObjectsMenu(p)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			selObj, err := objects.SelectObject(p, objs)
+		case "Generate", "Delete":
+			_, err := generate.GenDelWorkflow(p, selection)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			fmt.Println("Selected object: ", selObj)
-		case "Generate":
-			fmt.Println("Encrypt --> Generate.")
+		case "Encrypt":
+			fmt.Println("Encrypt was selected.")
+			err = encrypt.EncWorkflow(p)
+			if err != nil{
+				fmt.Println(err)
+				return
+			}
+		case "Exit":
+			fmt.Println("Exiting GoHSM... Goodbye!")
+			break
+		default:
+			fmt.Println("Others were selected.")
 		}
-		err = encrypt.EncryptAes(p, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_AES_CBC, nil)})
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		
-		fmt.Println("Encrypt was selected.")
-	case "Exit":
-		fmt.Println("Exiting GoHSM... Goodbye!")
-		return
-	default:
-		fmt.Println("Others were selected.")
 	}
+
+	return
 }
 
 

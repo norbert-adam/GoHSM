@@ -12,7 +12,7 @@ import (
 
 func listAttributes(p *context.AppContext, objList []pkcs11.ObjectHandle) error {
 	for _, obj := range objList {
-		objectType, err := getObjectType(p, obj)
+		objectType, err := GetObjectType(p, obj)
 		if err != nil {
 			return err
 		}
@@ -35,7 +35,24 @@ func listAttributes(p *context.AppContext, objList []pkcs11.ObjectHandle) error 
 }
 
 
-func getObjectType(p *context.AppContext, object pkcs11.ObjectHandle) (uint32, error) {
+func GetKeyType(p *context.AppContext, object pkcs11.ObjectHandle) (uint32, error) {
+	attrs, err := p.P11.GetAttributeValue(p.Session, object, []*pkcs11.Attribute{
+        pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, nil),
+    })
+	if err != nil {
+		newErr := fmt.Sprint("Error getting object type: ", err)
+		return 0, errors.New(newErr)
+	}
+
+	if len(attrs) == 0 || len(attrs[0].Value) == 0 {
+        return 0, fmt.Errorf("empty CKA_CLASS value")
+    }
+
+	keyType := binary.LittleEndian.Uint32(attrs[0].Value[:4])
+	return keyType, nil
+}
+
+func GetObjectType(p *context.AppContext, object pkcs11.ObjectHandle) (uint32, error) {
 	attrs, err := p.P11.GetAttributeValue(p.Session, object, []*pkcs11.Attribute{
         pkcs11.NewAttribute(pkcs11.CKA_CLASS, nil),
     })
