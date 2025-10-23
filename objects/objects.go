@@ -33,7 +33,7 @@ func ListObjects(p *context.AppContext, searchOption string) ([]pkcs11.ObjectHan
 			break
 		}
 
-		objectType, err := getObjectType(p, objs[0])
+		objectType, err := GetObjectType(p, objs[0])
 		if err != nil {
 			return nil, err
 
@@ -61,7 +61,7 @@ func SelectObject(p *context.AppContext, objectList []pkcs11.ObjectHandle) (pkcs
 	var selection int
 	fmt.Println("Select the object: ")
 	for i, obj := range objectList {
-		objType, err := getObjectType(p, obj)
+		objType, err := GetObjectType(p, obj)
 		if err != nil {
 			return 0, err
 		}

@@ -40,8 +40,9 @@ func ListObjectsMenu(p *context.AppContext) (error) {
 		}
 
 		fmt.Println("Object selected: ", obj)
-		p.Selected = obj
-		p.Action = selection
+
+		// TODO: this will need to be changed
+		p.SymKey = obj
 	case "Decrypt":
 		fmt.Println("Decrypt")
 	case "Wrap":
